@@ -63,8 +63,15 @@ app.use('/api/v1/events', eventRoutes);
 app.use('/events', eventRoutes);
 
 // Direct stats alias
-app.get('/stats', async (req, res) => res.json(await db.getStats()));
-app.get('/api/v1/stats', async (req, res) => res.json(await db.getStats()));
+const statsHandler = async (req, res) => {
+  const stats = await db.getStats();
+  res.json({
+    ...stats,
+    realTimeSubscribers: eventService.getSubscriberCounts(),
+  });
+};
+app.get('/stats', statsHandler);
+app.get('/api/v1/stats', statsHandler);
 
 // 5. Initialize WebSocket Server for Real-Time streaming
 eventService.initWebSocket(server);
