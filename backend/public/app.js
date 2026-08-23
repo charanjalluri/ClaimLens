@@ -220,8 +220,8 @@ function renderTable() {
   if (filtered.length === 0) {
     claimsTableBody.innerHTML = `
       <tr>
-        <td colspan="7" class="loading-state">
-          <span>No insurance claims found matching the current filter.</span>
+        <td colspan="7" class="table-empty">
+          <span>No claims found matching the active filter.</span>
         </td>
       </tr>
     `;
@@ -231,34 +231,34 @@ function renderTable() {
   claimsTableBody.innerHTML = filtered.map(claim => {
     const statusUpper = (claim.status || 'PROCESSING').toUpperCase();
     let statusClass = 'processing';
-    let statusText = 'PROCESSING';
+    let statusText = 'Processing';
 
     if (statusUpper === 'CONFLICT_DETECTED' || statusUpper === 'UNRESOLVED') {
       statusClass = 'conflict';
-      statusText = 'CONFLICT DETECTED';
+      statusText = 'Conflict Detected';
     } else if (statusUpper === 'CLEAR') {
       statusClass = 'clear';
-      statusText = 'VERIFIED CLEAR';
+      statusText = 'No Conflict';
     } else if (statusUpper === 'RESOLVED') {
       statusClass = 'resolved';
-      statusText = 'RESOLVED';
+      statusText = 'Resolved';
     } else if (statusUpper === 'AI_FAILED' || statusUpper === 'ERROR') {
       statusClass = 'error';
-      statusText = 'PIPELINE ERROR';
+      statusText = 'Error';
     }
 
     const hasImage = Boolean(claim.imageUrl);
     const hasAudio = Boolean(claim.audioUrl);
 
     const conflict = claim.conflicts && claim.conflicts.length > 0 ? claim.conflicts[0] : null;
-    let conflictHtml = '<span style="color: var(--text-muted);">None</span>';
+    let conflictHtml = '<span style="color: var(--text-muted);">—</span>';
     
     if (conflict) {
       const confPct = Math.round((conflict.confidence || 0.8) * 100);
       conflictHtml = `
-        <div class="conflict-cell-summary">
-          <span class="conflict-type-text">${escapeHtml((conflict.conflictType || 'DISCREPANCY').replace(/_/g, ' '))}</span>
-          <span class="conflict-conf-text">${confPct}% AI confidence</span>
+        <div class="conflict-cell">
+          <span class="conflict-cell-type">${escapeHtml((conflict.conflictType || 'discrepancy').replace(/_/g, ' '))}</span>
+          <span class="conflict-cell-conf">${confPct}% confidence</span>
         </div>
       `;
     }
@@ -279,23 +279,22 @@ function renderTable() {
           </div>
         </td>
         <td>
-          <div class="claim-desc-cell">
-            ${escapeHtml(claim.claimText || '')}
+          <div class="claim-desc-cell" title="${escapeHtml(claim.claimText || '')}">
+            ${escapeHtml(claim.claimText || '—')}
           </div>
         </td>
         <td>
-          <div class="evidence-chips">
-            <span class="evidence-tag ${hasImage ? 'active' : ''}" title="${hasImage ? 'Photo attached' : 'No photo'}">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div class="evidence-icons">
+            <span class="ev-icon ${hasImage ? 'ev-icon--active' : ''}" title="${hasImage ? 'Photo attached' : 'No photo'}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </span>
-            <span class="evidence-tag ${hasAudio ? 'active' : ''}" title="${hasAudio ? 'Voice memo attached' : 'No audio'}">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+            <span class="ev-icon ${hasAudio ? 'ev-icon--active' : ''}" title="${hasAudio ? 'Voice memo attached' : 'No audio'}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
             </span>
           </div>
         </td>
         <td>
-          <span class="status-badge ${statusClass}">
-            <span class="dot-sm ${statusClass === 'conflict' ? 'red' : statusClass === 'clear' ? 'green' : statusClass === 'resolved' ? 'blue' : 'purple'}"></span>
+          <span class="status-tag ${statusClass}">
             ${statusText}
           </span>
         </td>
@@ -303,9 +302,8 @@ function renderTable() {
           ${conflictHtml}
         </td>
         <td style="text-align: right;">
-          <button class="btn-action-inspect" onclick="openClaimModal('${claim.claimId}')">
-            <span>Inspect</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+          <button class="btn-inspect" onclick="openClaimModal('${claim.claimId}')">
+            Inspect
           </button>
         </td>
       </tr>
@@ -415,12 +413,12 @@ function renderResolutionHistory(resolutions) {
   }
 
   list.innerHTML = resolutions.map(r => `
-    <div class="resolution-card-done">
-      <div class="res-header-done">
-        <span class="res-by">Resolved by ${escapeHtml(r.resolvedBy || 'Lead Adjuster')}</span>
-        <span class="res-time">${new Date(r.resolvedAt).toLocaleString()}</span>
+    <div class="resolution-entry">
+      <div class="resolution-entry-meta">
+        <span class="resolution-entry-by">Resolved by ${escapeHtml(r.resolvedBy || 'Claims Adjuster')}</span>
+        <span class="resolution-entry-time">${new Date(r.resolvedAt).toLocaleString()}</span>
       </div>
-      <p class="res-notes">${escapeHtml(r.resolutionNotes || '')}</p>
+      <p class="resolution-entry-notes">${escapeHtml(r.resolutionNotes || '')}</p>
     </div>
   `).join('');
 }
@@ -486,24 +484,40 @@ btnDismissConflict.addEventListener('click', async () => {
   }
 });
 
-// ─── Automated PRD Test Case Execution ───────────────────────────────────────
+// ─── Dashboard Test Claim (sends REAL parseable media through the REAL AI pipeline) ─
 btnTestClaim.addEventListener('click', async () => {
   btnTestClaim.disabled = true;
   btnTestClaim.innerHTML = '<span class="loader-spinner" style="width:14px;height:14px;margin:0;border-width:2px;"></span> Running Pipeline...';
 
   try {
-    const randId = `CLM-PRD-${Math.floor(100 + Math.random() * 900)}`;
+    const randId = `CLM-TEST-${Math.floor(100 + Math.random() * 900)}`;
 
-    // Create minimal valid JPEG and audio blobs to simulate Android media capture
-    const dummyImageBlob = new Blob([new Uint8Array([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00])], { type: 'image/jpeg' });
-    const dummyAudioBlob = new Blob([new Uint8Array([0x49, 0x44, 0x33])], { type: 'audio/mpeg' });
+    // --- Build a valid 1×1 pixel JPEG (Pillow-parseable for image analysis stage) ---
+    // This is a complete baseline JPEG with proper SOF0 / Huffman tables.
+    const jpegHex = 'ffd8ffe000104a46494600010100000100010000ffdb004300080606070605080707070909080a0c140d0c0b0b0c1912130f141d1a1f1e1d1a1c1c20242e27202224231c1c2837292c303134343420273d3832363c2e33343432ffc0000b080001000101011100ffc4001f0000010501010101010100000000000000000102030405060708090a0bffc400b5100002010303020403050504040000017d01020300041105122131410613516107227114328191a10823422b1c11552d1f02433627282090a161718191a25262728292a3435363738393a434445464748494a535455565758595a636465666768696a737475767778797a838485868788898a929394959697989990a2a3a4a5a6a7a8a9aab2b3b4b5b6b7b8b9bac2c3c4c5c6c7c8c9cad2d3d4d5d6d7d8d9dae1e2e3e4e5e6e7e8e9eaf1f2f3f4f5f6f7f8f9faffda00080101000003f00fa28a2803ffd9';
+    const jpegBytes = new Uint8Array(jpegHex.match(/.{2}/g).map(h => parseInt(h, 16)));
+    const validImageBlob = new Blob([jpegBytes], { type: 'image/jpeg' });
+
+    // --- Build a valid 1-second silent WAV (Whisper-parseable for transcription stage) ---
+    const sampleRate = 8000;
+    const numSamples = sampleRate; // 1 second silence
+    const dataSize = numSamples * 2; // 16-bit mono
+    const wavBuf = new ArrayBuffer(44 + dataSize);
+    const wav = new DataView(wavBuf);
+    const enc = (off, s) => { for (let i = 0; i < s.length; i++) wav.setUint8(off + i, s.charCodeAt(i)); };
+    enc(0, 'RIFF'); wav.setUint32(4, 36 + dataSize, true); enc(8, 'WAVE');
+    enc(12, 'fmt '); wav.setUint32(16, 16, true); wav.setUint16(20, 1, true);
+    wav.setUint16(22, 1, true); wav.setUint32(24, sampleRate, true);
+    wav.setUint32(28, sampleRate * 2, true); wav.setUint16(32, 2, true);
+    wav.setUint16(34, 16, true); enc(36, 'data'); wav.setUint32(40, dataSize, true);
+    const validAudioBlob = new Blob([wavBuf], { type: 'audio/wav' });
 
     const formData = new FormData();
     formData.append('claim_id', randId);
-    formData.append('claim_text', 'My front bumper is damaged.');
-    formData.append('user_id', 'claimant-operator');
-    formData.append('image', dummyImageBlob, 'front_bumper_damage.jpg');
-    formData.append('audio', dummyAudioBlob, 'windshield_broken_memo.mp3');
+    formData.append('claim_text', 'The vehicle has visible front-end damage from a collision.');
+    formData.append('user_id', 'dashboard-test');
+    formData.append('image', validImageBlob, 'test_damage.jpg');
+    formData.append('audio', validAudioBlob, 'test_voice.wav');
 
     const res = await fetch('/api/v1/claims', {
       method: 'POST',
@@ -512,7 +526,8 @@ btnTestClaim.addEventListener('click', async () => {
 
     const data = await res.json();
     if (res.ok) {
-      showToast(`PRD Test Claim ${data.claimId} processed! Conflict detected.`, 'success');
+      const result = data.conflictDetected ? 'AI detected a conflict.' : 'AI: no conflict found.';
+      showToast(`Test Claim ${data.claimId} complete. ${result}`, 'success');
       fetchClaims();
       fetchStats();
       setTimeout(() => openClaimModal(data.claimId), 400);
@@ -520,10 +535,10 @@ btnTestClaim.addEventListener('click', async () => {
       showToast(`Error: ${data.message || 'Submission failed'}`, 'alert');
     }
   } catch (err) {
-    showToast('Failed to execute automated test claim.', 'alert');
+    showToast('Failed to execute test claim.', 'alert');
   } finally {
     btnTestClaim.disabled = false;
-    btnTestClaim.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Run PRD Test Case';
+    btnTestClaim.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Run Test Claim';
   }
 });
 
