@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment / Secrets — NEVER COMMIT THESE
+.env
+*.env
+*.key
+*.pem
+
+# Whisper model cache (large files)
+~/.cache/whisper/
+
+# Test artifacts
+tests/test_assets/*.generated.*
+tests/outputs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
