@@ -59,6 +59,12 @@ const aiService = {
       }
     }
 
+    // Use mock fallback in unit tests if MOCK_AI_FALLBACK or NODE_ENV is set to test
+    if (process.env.MOCK_AI_FALLBACK === 'true' || process.env.NODE_ENV === 'test') {
+      console.info(`[AI-Service] Using test conflict analysis fallback for claim ${claimId}...`);
+      return this.heuristicFallback({ claimId, claimText, imageFile, audioFile, totalTime: 5 });
+    }
+
     const aiEndpoint = `${config.aiServiceUrl}/api/v1/analyze`;
     console.log(`[AI-Service] Calling Agent 1 pipeline at: ${aiEndpoint} for claim ${claimId}`);
 
