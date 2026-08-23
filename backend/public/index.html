@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClaimLens — AI Claims Intelligence & Operations Dashboard</title>
+  <meta name="description" content="AI-powered multimodal insurance claim conflict detection operations portal.">
+  
+  <!-- Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- App Container -->
+  <div class="dashboard-shell">
+    
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <div class="brand-badge">
+          <div class="brand-symbol">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <path d="M11 8v6"></path>
+              <path d="M8 11h6"></path>
+            </svg>
+          </div>
+          <div class="brand-title-wrap">
+            <span class="brand-name">ClaimLens</span>
+            <span class="brand-tag">Ops Console</span>
+          </div>
+        </div>
+
+        <nav class="nav-menu">
+          <button class="nav-link active" data-tab="all" id="nav-all">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h18"/></svg>
+            Overview
+            <span class="badge-count" id="pill-all">0</span>
+          </button>
+          <button class="nav-link" data-tab="unresolved" id="nav-conflicts">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Conflicts
+            <span class="badge-count badge-alert" id="pill-conflicts">0</span>
+          </button>
+          <button class="nav-link" data-tab="clear" id="nav-clear">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Verified Clear
+            <span class="badge-count" id="pill-clear">0</span>
+          </button>
+          <button class="nav-link" data-tab="resolved" id="nav-resolved">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Resolved
+            <span class="badge-count" id="pill-resolved">0</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Nav Right: System Health Indicators -->
+      <div class="nav-right">
+        <div class="health-indicators">
+          <div class="health-chip" id="chip-backend" title="Express.js REST & SQLite">
+            <span class="indicator-dot online"></span>
+            <span class="chip-label">Backend</span>
+          </div>
+          <div class="health-chip" id="chip-ai" title="NVIDIA NIM & Whisper">
+            <span class="indicator-dot online" id="ai-dot"></span>
+            <span class="chip-label" id="ai-chip-label">AI Engine</span>
+          </div>
+          <div class="health-chip" id="chip-db" title="SQLite Database Persistence">
+            <span class="indicator-dot online"></span>
+            <span class="chip-label">SQLite</span>
+          </div>
+        </div>
+
+        <div class="stream-badge" id="ws-status" title="Real-time event sync via WebSocket / SSE">
+          <span class="pulse-dot"></span>
+          <span class="stream-text" id="ws-status-text">Live Sync</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-body">
+      
+      <!-- Overview Header -->
+      <section class="overview-header">
+        <div class="header-intro">
+          <div class="title-row">
+            <h1 class="page-title">Claims Intelligence</h1>
+            <span class="version-tag">NVIDIA NIM • Nemotron 30B</span>
+          </div>
+          <p class="page-subtitle">AI-powered cross-modal claim verification across photo evidence, voice audio, and text statements</p>
+        </div>
+
+        <div class="header-controls">
+          <button class="btn btn-outline" id="btn-refresh" title="Reload claims and statistics from database">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh
+          </button>
+          <button class="btn btn-primary" id="btn-test-claim" title="Submit automated multimodal test claim (bumper photo vs windshield audio)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Run PRD Test Case
+          </button>
+        </div>
+      </section>
+
+      <!-- KPI Metrics Row -->
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-meta">
+            <span class="kpi-label">Total Ingested Claims</span>
+            <span class="kpi-subtext">All submitted claims</span>
+          </div>
+          <div class="kpi-value-wrap">
+            <span class="kpi-number" id="stat-total">0</span>
+            <div class="kpi-icon-badge blue">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-card warning-card">
+          <div class="kpi-meta">
+            <span class="kpi-label">Active Conflicts</span>
+            <span class="kpi-subtext">Contradictions needing review</span>
+          </div>
+          <div class="kpi-value-wrap">
+            <span class="kpi-number text-danger" id="stat-conflicts">0</span>
+            <div class="kpi-icon-badge red">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-meta">
+            <span class="kpi-label">Resolved Discrepancies</span>
+            <span class="kpi-subtext">Adjuster verified claims</span>
+          </div>
+          <div class="kpi-value-wrap">
+            <span class="kpi-number text-success" id="stat-resolved">0</span>
+            <div class="kpi-icon-badge green">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-meta">
+            <span class="kpi-label">Processing / Queued</span>
+            <span class="kpi-subtext">Active pipeline evaluations</span>
+          </div>
+          <div class="kpi-value-wrap">
+            <span class="kpi-number text-indigo" id="stat-processing">0</span>
+            <div class="kpi-icon-badge purple">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Operational Workspace: Filter Toolbar + Claims Table -->
+      <section class="table-card-container">
+        
+        <!-- Filter Toolbar -->
+        <div class="table-toolbar">
+          <div class="search-input-wrap">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="search-input" placeholder="Search by claim ID, claimant, text statement, or conflict type..." aria-label="Search claims">
+          </div>
+
+          <div class="filter-group" id="filter-tabs">
+            <button class="filter-chip active" data-filter="all">All Claims</button>
+            <button class="filter-chip alert-chip" data-filter="unresolved">
+              <span class="dot-sm red"></span> Conflicts Only
+            </button>
+            <button class="filter-chip" data-filter="clear">
+              <span class="dot-sm green"></span> Verified Clear
+            </button>
+            <button class="filter-chip" data-filter="resolved">
+              <span class="dot-sm blue"></span> Resolved
+            </button>
+          </div>
+        </div>
+
+        <!-- Claims Table -->
+        <div class="table-responsive">
+          <table class="claims-table">
+            <thead>
+              <tr>
+                <th style="width: 130px;">Claim ID</th>
+                <th style="width: 170px;">Submitted</th>
+                <th>Claimant Description</th>
+                <th style="width: 120px;">Evidence</th>
+                <th style="width: 170px;">Verification Status</th>
+                <th style="width: 220px;">Conflict Details</th>
+                <th style="width: 130px; text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="claims-table-body">
+              <tr>
+                <td colspan="7" class="loading-state">
+                  <div class="loader-spinner"></div>
+                  <span>Connecting to SQLite database and retrieving claims...</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer System Status -->
+    <footer class="system-footer">
+      <div class="footer-meta">
+        <span class="footer-badge">ClaimLens v1.0.0</span>
+        <span class="footer-sep">•</span>
+        <span>FastAPI + NVIDIA NIM Multimodal Reasoning</span>
+        <span class="footer-sep">•</span>
+        <span>Whisper Voice Transcription</span>
+        <span class="footer-sep">•</span>
+        <span id="footer-latency">Measured Latency: 11.9s (Target &lt; 30s)</span>
+      </div>
+      <div class="footer-team">
+        <span>AI / Tech Lead: <strong>Jalluri Venkata Satya Charan</strong></span>
+        <span class="footer-sep">•</span>
+        <span>Backend: <strong>Palukuri Kaushik</strong></span>
+        <span class="footer-sep">•</span>
+        <span>Android: <strong>Gayathri Sai Vemula</strong></span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Detail Inspection & Resolution Drawer Modal -->
+  <div class="modal-backdrop" id="detail-modal" aria-hidden="true">
+    <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="modal-claim-id">
+      
+      <!-- Modal Header -->
+      <div class="modal-top">
+        <div class="modal-header-main">
+          <div class="modal-id-row">
+            <span class="modal-badge-id" id="modal-claim-id">CLM-001</span>
+            <span class="status-pill" id="modal-status-badge">CONFLICT DETECTED</span>
+          </div>
+          <div class="modal-meta-row">
+            <span id="modal-user-id">Claimant: user-101</span>
+            <span class="meta-divider">•</span>
+            <span id="modal-date">Submitted: 2026-08-23 10:30 AM</span>
+            <span class="meta-divider">•</span>
+            <span id="modal-latency-badge" class="latency-pill">AI Latency: 11.9s</span>
+          </div>
+        </div>
+        <button class="btn-close" id="modal-close-btn" aria-label="Close modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-scroll-area">
+        
+        <!-- Multi-modal Contradiction Analysis (Hero Section when conflict detected) -->
+        <div class="conflict-hero-box" id="modal-conflict-box">
+          <div class="conflict-hero-header">
+            <div class="conflict-header-left">
+              <div class="alert-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <h3 class="conflict-hero-title">Cross-Modal Discrepancy Detected</h3>
+                <span class="conflict-type-label" id="modal-conflict-type">DAMAGE LOCATION MISMATCH</span>
+              </div>
+            </div>
+            
+            <div class="confidence-badge-block">
+              <span class="conf-title">AI Confidence</span>
+              <span class="conf-value" id="modal-confidence-val">95%</span>
+            </div>
+          </div>
+
+          <!-- Side-by-side Evidence Contradiction Visual Comparison -->
+          <div class="evidence-versus-grid">
+            <div class="versus-card card-a">
+              <div class="versus-card-header">
+                <span class="versus-tag">EVIDENCE A • PHOTO / TEXT</span>
+              </div>
+              <div class="versus-content" id="modal-evidence-a">
+                "Photo & text report front bumper damage"
+              </div>
+            </div>
+
+            <div class="versus-divider">
+              <span>VS</span>
+            </div>
+
+            <div class="versus-card card-b">
+              <div class="versus-card-header">
+                <span class="versus-tag">EVIDENCE B • VOICE RECORDING</span>
+              </div>
+              <div class="versus-content" id="modal-evidence-b">
+                "Voice statement reports windshield completely broken"
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Evidence-based Explanation -->
+          <div class="explanation-container">
+            <div class="explanation-heading">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              AI Discrepancy Explanation
+            </div>
+            <p class="explanation-text" id="modal-explanation">
+              The submitted visual evidence indicates front bumper damage, while the voice statement reports windshield damage.
+            </p>
+          </div>
+        </div>
+
+        <!-- Raw Multi-Modal Evidence Section -->
+        <div class="section-title-wrap">
+          <h4 class="section-title">Submitted Multimodal Evidence</h4>
+          <span class="section-subtitle">Original inputs captured via Android application</span>
+        </div>
+
+        <div class="evidence-panels-grid">
+          <!-- Text Statement -->
+          <div class="evidence-block">
+            <div class="block-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>Typed Text Statement</span>
+            </div>
+            <div class="statement-bubble" id="modal-claim-text">
+              "My front bumper is damaged."
+            </div>
+          </div>
+
+          <!-- Photo Evidence & Vision Analysis -->
+          <div class="evidence-block">
+            <div class="block-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Photo Evidence (CameraX)</span>
+            </div>
+            <div class="media-preview-container" id="modal-photo-container">
+              <span class="empty-media-msg">No image attached</span>
+            </div>
+            <div class="ai-annotation-box" id="modal-image-analysis-box">
+              <span class="annotation-label">NVIDIA Vision Analysis:</span>
+              <p class="annotation-text" id="modal-image-analysis-text">Front bumper shows impact scraping.</p>
+            </div>
+          </div>
+
+          <!-- Voice Memo & Whisper Transcription -->
+          <div class="evidence-block">
+            <div class="block-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              <span>Voice Memo (Audio)</span>
+            </div>
+            <div class="media-preview-container" id="modal-audio-container">
+              <span class="empty-media-msg">No voice recording attached</span>
+            </div>
+            <div class="ai-annotation-box" id="modal-transcription-box">
+              <span class="annotation-label">Whisper Transcription:</span>
+              <p class="annotation-text" id="modal-transcription-text">"My windshield was completely broken."</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Adjuster Resolution Workflow -->
+        <div class="resolution-container" id="modal-resolution-section">
+          <div class="section-title-wrap">
+            <h4 class="section-title">Adjuster Resolution & Audit Trail</h4>
+            <span class="section-subtitle">Operational sign-off for discrepancy override or settlement</span>
+          </div>
+
+          <div class="resolution-history" id="modal-resolutions-list"></div>
+
+          <form id="resolution-form" class="resolution-form-card">
+            <label for="resolution-notes" class="field-label">Resolution Findings / Notes:</label>
+            <textarea id="resolution-notes" class="input-textarea" placeholder="Summarize claimant communication, verification findings, or supervisor approval notes..." rows="3" required></textarea>
+            
+            <div class="form-btn-row">
+              <button type="button" class="btn btn-outline" id="btn-dismiss-conflict">
+                Dismiss Discrepancy
+              </button>
+              <button type="submit" class="btn btn-primary" id="btn-submit-resolution">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Resolve Conflict & Approve Claim
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-Time Toast Notification System -->
+  <div class="toast-stack" id="toast-container" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
