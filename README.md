@@ -48,18 +48,36 @@ Dashboard / Resolution
 
 ```
 ClaimLens/
-├── ai-pipeline/        ← AI conflict-detection microservice
+├── ai-pipeline/        ← AI conflict-detection microservice (FastAPI, NVIDIA NIM, Whisper)
+├── backend/            ← Backend API, Database, Real-Time SSE/WS, Admin Dashboard (Node.js/Express)
 ├── docs/               ← Shared API contract & integration guides
 └── README.md
 ```
 
-> **Note:** The Android app and Backend API live in separate branches managed by the respective team members.
+---
+
+## Shared API Contract & Documentation
+
+- [`docs/api-contract.md`](docs/api-contract.md) — Shared request/response specification agreed between all team members.
+- [`docs/android-integration-guide.md`](docs/android-integration-guide.md) — Complete guide for Android Retrofit 2 integration, data models, and status codes.
+- [`docs/integration-guide.md`](docs/integration-guide.md) — Backend-to-AI microservice integration guide.
 
 ---
 
-## Shared API Contract
+## Quick Start (Backend API & Admin Dashboard)
 
-See [`docs/api-contract.md`](docs/api-contract.md) for the full request/response specification agreed between all three team members.
+```bash
+cd backend
+npm install
+npm start
+```
+
+- **HTTP API Base**: `http://localhost:8000`
+- **Live Admin Dashboard**: `http://localhost:8000/dashboard`
+- **Real-Time WebSocket**: `ws://localhost:8000/ws`
+- **SSE Stream**: `http://localhost:8000/api/v1/events`
+- **Health check**: `http://localhost:8000/health`
+- **Run Tests**: `npm test`
 
 ---
 
