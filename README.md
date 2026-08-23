@@ -10,8 +10,8 @@
 | Name | Role | Key Responsibilities |
 |---|---|---|
 | **Jalluri Venkata Satya Charan** | AI + Integration / Tech Lead | NVIDIA NIM multimodal AI pipeline, voice transcription, image analysis, cross-modal conflict detection, AI response contract, AI/backend integration, overall technical integration |
-| **Palukuri Kaushik** | Backend + Database | Backend APIs, claim processing, database, AI service integration, conflict storage, real-time updates, admin dashboard APIs, conflict resolution |
-| **Gayathri Sai Vemula** | Android Developer | Android mobile app, claim submission UI, CameraX photo capture, voice recording, text input, Retrofit API integration, Room local storage, WorkManager offline sync, claim status/result display |
+| **Gayathri Sai Vemula** | Backend + Database | Backend APIs, claim processing, database, AI service integration, conflict storage, real-time updates, admin dashboard APIs, conflict resolution |
+| **Palukuri Kaushik** | Android Developer | Android mobile app, claim submission UI, CameraX photo capture, voice recording, text input, Retrofit API integration, Room local storage, WorkManager offline sync, claim status/result display |
 
 ---
 
@@ -19,11 +19,11 @@
 
 ```
 Android App
-Gayathri Sai Vemula
+Palukuri Kaushik
     │  POST /api/v1/claims  (multipart: image + audio + text)
     ▼
 Backend + Database
-Palukuri Kaushik
+Gayathri Sai Vemula
     │  POST http://ai-service:8001/api/v1/analyze
     ▼
 AI Pipeline

@@ -16,7 +16,7 @@
     "backend",
     "sqlite"
   ],
-  "author": "Palukuri Kaushik",
+  "author": "Gayathri Sai Vemula",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.7.7",

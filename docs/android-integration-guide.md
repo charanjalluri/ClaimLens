@@ -1,7 +1,7 @@
 # ClaimLens — Android Integration Guide
 
-> **Target Audience:** Gayathri Sai Vemula (Android Developer)  
-> **Author:** Palukuri Kaushik (Backend Engineer + Database Engineer, Agent 2)  
+> **Target Audience:** Palukuri Kaushik (Android Developer)  
+> **Author:** Gayathri Sai Vemula (Backend + Database Developer)  
 > **Backend Version:** 1.0.0  
 > **Last Updated:** 2026-08-23  
 
