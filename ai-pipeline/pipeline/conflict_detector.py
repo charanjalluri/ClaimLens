@@ -3,12 +3,12 @@ ClaimLens AI Pipeline — Conflict Detection (NVIDIA NIM)
 =======================================================
 The core intelligence of ClaimLens.
 Takes all three evidence streams (text, transcription, image analysis)
-and uses the NVIDIA NIM reasoning model to detect contradictions and
+and uses the NVIDIA NIM model to detect contradictions and
 generate a structured conflict report.
 
-Model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
-  — 30B parameter model with built-in chain-of-thought reasoning
-  — reasoning_budget controls how much thinking the model does
+Model: meta/llama-3.2-11b-vision-instruct  (set via NVIDIA_MODEL env var)
+  — Vision-capable model that also handles text-only reasoning
+  — reasoning_budget is NOT used (Nemotron-only parameter)
 """
 import json
 import logging
@@ -110,7 +110,7 @@ def detect_conflicts(
         return _insufficient_evidence_result(claim_id)
 
     model = nvidia_model or os.getenv(
-        "NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+        "NVIDIA_MODEL", "meta/llama-3.2-11b-vision-instruct"
     )
 
     prompt = CONFLICT_DETECTION_PROMPT.format(
@@ -122,8 +122,8 @@ def detect_conflicts(
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 65536,
-        "reasoning_budget": 16384,   # Allow full chain-of-thought reasoning
+        "max_tokens": 2048,
+        # NOTE: reasoning_budget is Nemotron-only — removed to support Llama models
         "temperature": 0.6,
         "top_p": 0.95,
         "stream": False,
@@ -140,7 +140,7 @@ def detect_conflicts(
             NVIDIA_API_URL,
             headers=headers,
             json=payload,
-            timeout=120,   # Reasoning model can take longer
+            timeout=180,   # Allow time for large model cold-start
         )
         resp.raise_for_status()
 

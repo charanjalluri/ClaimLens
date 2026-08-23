@@ -79,8 +79,12 @@ def analyze_image(
             "error": "Empty image data received",
         }
 
+    # Always use the vision-capable model for image analysis.
+    # NVIDIA_VISION_MODEL must support image_url content type.
+    # meta/llama-3.2-11b-vision-instruct is the correct default.
     model = nvidia_model or os.getenv(
-        "NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+        "NVIDIA_VISION_MODEL",
+        os.getenv("NVIDIA_MODEL", "meta/llama-3.2-11b-vision-instruct")
     )
 
     try:

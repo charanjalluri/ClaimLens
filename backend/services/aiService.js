@@ -99,14 +99,13 @@ const aiService = {
       };
     } catch (error) {
       const totalTime = Date.now() - startTime;
-      console.warn(`[AI-Service] Failed to reach or process with live AI service: ${error.message}`);
+      console.warn(`[AI-Service] Failed to reach or process with live AI service: ${error.message} (code=${error.code})`);
 
-      // Fallback heuristics / mock fallback if AI microservice is not running during local dev/tests
-      if (process.env.MOCK_AI_FALLBACK === 'true' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-        console.info(`[AI-Service] Using resilient conflict analysis fallback for claim ${claimId}...`);
-        return this.heuristicFallback({ claimId, claimText, imageFile, audioFile, totalTime });
-      }
-
+      // AI is running but returned an error or timed out — report failure accurately.
+      // IMPORTANT: We no longer silently fall back to fake/heuristic data on ECONNREFUSED.
+      // If the AI service is not running, claims will correctly report ai_failed.
+      const errorDetail = error.response?.data?.detail || error.response?.data?.error || error.message;
+      console.error(`[AI-Service] AI pipeline error for ${claimId}: ${errorDetail}`);
       return {
         success: false,
         claimId,
@@ -115,7 +114,7 @@ const aiService = {
         conflictType: 'none',
         evidenceA: null,
         evidenceB: null,
-        explanation: `AI service error: ${error.response?.data?.detail || error.message}`,
+        explanation: `AI service error: ${errorDetail}`,
         status: 'ai_failed',
         transcription: null,
         imageAnalysis: null,

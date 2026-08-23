@@ -55,7 +55,7 @@ def transcribe_audio(audio_bytes: bytes, filename: str = "audio.mp3", model_name
 
     # Determine file suffix from filename
     suffix = Path(filename).suffix.lower()
-    if suffix not in {".mp3", ".wav", ".m4a", ".ogg", ".flac", ".webm"}:
+    if suffix not in {".mp3", ".wav", ".m4a", ".ogg", ".flac", ".webm", ".mp4"}:
         suffix = ".mp3"  # fallback
 
     try:
