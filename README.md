@@ -5,26 +5,13 @@
 
 ---
 
-## Project Structure
+## Team
 
-```
-ClaimLens/
-├── ai-pipeline/        ← AI conflict-detection microservice (this repo)
-├── docs/               ← Shared API contract & integration guides
-└── README.md
-```
-
-> **Note:** The Android app and Backend API live in separate repos / branches managed by respective team members.
-
----
-
-## Team & Responsibilities
-
-| Role | Scope |
-|---|---|
-| Android Developer | Mobile app (photo + text + voice capture) |
-| Agent 2 — Backend | REST API, database, claim storage, routing |
-| **Agent 1 — AI (this repo)** | AI pipeline, conflict detection, multimodal analysis |
+| Name | Role | Key Responsibilities |
+|---|---|---|
+| **Jalluri Venkata Satya Charan** | AI + Integration / Tech Lead | NVIDIA NIM multimodal AI pipeline, voice transcription, image analysis, cross-modal conflict detection, AI response contract, AI/backend integration, overall technical integration |
+| **Palukuri Kaushik** | Backend + Database | Backend APIs, claim processing, database, AI service integration, conflict storage, real-time updates, admin dashboard APIs, conflict resolution |
+| **Gayathri Sai Vemula** | Android Developer | Android mobile app, claim submission UI, CameraX photo capture, voice recording, text input, Retrofit API integration, Room local storage, WorkManager offline sync, claim status/result display |
 
 ---
 
@@ -32,25 +19,47 @@ ClaimLens/
 
 ```
 Android App
+Gayathri Sai Vemula
     │  POST /api/v1/claims  (multipart: image + audio + text)
     ▼
-Backend API  (Node.js / Express — Agent 2)
+Backend + Database
+Palukuri Kaushik
     │  POST http://ai-service:8001/api/v1/analyze
     ▼
-AI Pipeline Service  ← Port 8001
-    │  Whisper transcription + Gemini Vision + Conflict Detection
+AI Pipeline
+Jalluri Venkata Satya Charan
+    │  Whisper transcription + NVIDIA NIM Vision + Conflict Detection
+    ▼
+NVIDIA NIM
+    │
     ▼
 Conflict Result JSON
     │
     ▼
-Database → Admin Dashboard
+Backend + Database
+    │
+    ▼
+Dashboard / Resolution
 ```
+
+---
+
+## Project Structure
+
+```
+ClaimLens/
+├── ai-pipeline/        ← AI conflict-detection microservice
+├── docs/               ← Shared API contract & integration guides
+└── README.md
+```
+
+> **Note:** The Android app and Backend API live in separate branches managed by the respective team members.
 
 ---
 
 ## Shared API Contract
 
-See [`docs/api-contract.md`](docs/api-contract.md) for the full request/response specification.
+See [`docs/api-contract.md`](docs/api-contract.md) for the full request/response specification agreed between all three team members.
 
 ---
 
@@ -59,7 +68,7 @@ See [`docs/api-contract.md`](docs/api-contract.md) for the full request/response
 ```bash
 cd ai-pipeline
 pip install -r requirements.txt
-cp .env.example .env        # Add your GEMINI_API_KEY
+cp .env.example .env        # Add your NVIDIA_API_KEY
 uvicorn main:app --port 8001 --reload
 ```
 
@@ -72,11 +81,12 @@ GET http://localhost:8001/health
 
 ## Branches
 
-| Branch | Purpose |
-|---|---|
-| `main` | Stable, reviewed code only |
-| `feature/ai-integration` | AI pipeline (Agent 1) |
-| `feature/backend` | Backend API (Agent 2) |
+| Branch | Owner | Purpose |
+|---|---|---|
+| `main` | All | Stable, reviewed code only |
+| `feature/ai-integration` | Jalluri Venkata Satya Charan | AI pipeline |
+| `feature/backend` | Palukuri Kaushik | Backend API + Database |
+| `feature/android` | Gayathri Sai Vemula | Android application |
 
 ---
 
