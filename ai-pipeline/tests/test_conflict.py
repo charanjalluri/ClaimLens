@@ -252,7 +252,7 @@ class TestAPIRoute:
         data = response.json()
         assert data["status"] == "healthy"
         assert "whisperModel" in data
-        assert "geminiModel" in data  # field name kept for backward compat
+        assert "nvidiaModel" in data  # NVIDIA NIM model identifier
 
     def test_analyze_endpoint_missing_claim_text_returns_422(self):
         """claim_text is required — should return 422 if missing."""

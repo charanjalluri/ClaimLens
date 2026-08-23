@@ -14,6 +14,7 @@ Environment variables (set in .env file):
 """
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -41,6 +42,19 @@ if not NVIDIA_API_KEY:
 else:
     logger.info("NVIDIA NIM API key loaded.")
 
+# ─── Lifespan (startup logging) ──────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    logger.info("=" * 60)
+    logger.info("  ClaimLens AI Pipeline  —  Starting up")
+    logger.info(f"  Whisper model  : {os.getenv('WHISPER_MODEL', 'base')}")
+    logger.info(f"  NVIDIA model   : {os.getenv('NVIDIA_MODEL', 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning')}")
+    logger.info(f"  NVIDIA API URL : {os.getenv('NVIDIA_API_URL', 'https://integrate.api.nvidia.com/v1')}")
+    logger.info(f"  API docs       : http://localhost:{os.getenv('PORT', '8001')}/docs")
+    logger.info("=" * 60)
+    yield  # application runs here
+
+
 # ─── FastAPI App ──────────────────────────────────────────────────────────────
 app = FastAPI(
     title="ClaimLens AI Pipeline",
@@ -52,6 +66,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Allow CORS for backend service (adjust origins in production)
@@ -66,17 +81,6 @@ app.add_middleware(
 # ─── Routes ───────────────────────────────────────────────────────────────────
 from api.routes import router  # noqa: E402
 app.include_router(router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("=" * 60)
-    logger.info("  ClaimLens AI Pipeline  —  Starting up")
-    logger.info(f"  Whisper model  : {os.getenv('WHISPER_MODEL', 'base')}")
-    logger.info(f"  NVIDIA model   : {os.getenv('NVIDIA_MODEL', 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning')}")
-    logger.info(f"  NVIDIA API URL : {os.getenv('NVIDIA_API_URL', 'https://integrate.api.nvidia.com/v1')}")
-    logger.info(f"  API docs       : http://localhost:{os.getenv('PORT', '8001')}/docs")
-    logger.info("=" * 60)
 
 
 # ─── Dev server ───────────────────────────────────────────────────────────────

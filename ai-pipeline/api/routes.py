@@ -32,7 +32,7 @@ async def health_check():
         status="healthy",
         version="1.0.0",
         whisperModel=os.getenv("WHISPER_MODEL", "base"),
-        geminiModel=os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"),
+        nvidiaModel=os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"),
     )
 
 
@@ -56,8 +56,8 @@ async def analyze_claim(
     """
     Full AI analysis pipeline:
       1. Transcribe voice audio → text (Whisper)
-      2. Analyse damage photo → description (Gemini Vision)
-      3. Cross-modal conflict detection (Gemini)
+      2. Analyse damage photo → description (NVIDIA NIM Vision)
+      3. Cross-modal conflict detection (NVIDIA NIM Reasoning)
       4. Return structured conflict report
     """
     start_time = time.time()
@@ -98,7 +98,7 @@ async def analyze_claim(
             logger.warning(f"[{claim_id}] Invalid audio bytes — skipping transcription.")
 
     # -----------------------------------------------------------------------
-    # Stage 2: Image Analysis (Gemini Vision)
+    # Stage 2: Image Analysis (NVIDIA NIM Vision)
     # -----------------------------------------------------------------------
     if image is not None:
         import os
@@ -130,7 +130,7 @@ async def analyze_claim(
             logger.warning(f"[{claim_id}] Invalid image bytes — skipping image analysis.")
 
     # -----------------------------------------------------------------------
-    # Stage 3: Conflict Detection (Gemini)
+    # Stage 3: Conflict Detection (NVIDIA NIM Reasoning)
     # -----------------------------------------------------------------------
     try:
         import os

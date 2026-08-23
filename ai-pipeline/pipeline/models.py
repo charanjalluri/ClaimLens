@@ -4,7 +4,7 @@ ClaimLens AI Pipeline — Pydantic Data Models
 Defines all request/response schemas used by the API and pipeline stages.
 """
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional
 from enum import Enum
 
 
@@ -34,7 +34,7 @@ class TranscriptionResult(BaseModel):
 class ImageAnalysisResult(BaseModel):
     """Result from the image analysis stage."""
     description: str
-    damage_components: list[str] = Field(default_factory=list)
+    damage_components: List[str] = Field(default_factory=list)
     damage_location: Optional[str] = None
     damage_severity: Optional[str] = None
     success: bool = True
@@ -84,4 +84,4 @@ class HealthResponse(BaseModel):
     status: str = "healthy"
     version: str = "1.0.0"
     whisperModel: str
-    geminiModel: str
+    nvidiaModel: str
