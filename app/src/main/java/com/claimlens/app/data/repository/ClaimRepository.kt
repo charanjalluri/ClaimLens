@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -30,7 +31,7 @@ class ClaimRepository(
 
     val allClaims: Flow<List<ClaimEntity>> = claimDao.getAllClaims()
 
-    suspend fun createClaim(description: String, photoPath: String?, audioPath: String?) {
+    suspend fun createClaim(description: String, photoPath: String?, audioPath: String?) = withContext(Dispatchers.IO) {
         val claim = ClaimEntity(
             description = description,
             photoPath = photoPath,
@@ -39,15 +40,15 @@ class ClaimRepository(
         )
         val id = claimDao.insertClaim(claim)
         val savedClaim = claim.copy(id = id)
-        Log.d(TAG, "Created claim in Room with local ID: $id")
 
-        // Trigger immediate coroutine upload in background for responsive UX
-        CoroutineScope(Dispatchers.IO).launch {
-            uploadClaim(savedClaim)
+        Log.d("CLAIMLENS_UPLOAD", "SUBMIT_STARTED localId=$id description='$description'")
+        Log.d("CLAIMLENS_UPLOAD", "CLAIM_CREATED localId=$id description='$description'")
+        Log.d("CLAIMLENS_UPLOAD", "STATUS_PENDING_SYNC localId=$id")
+
+        val success = uploadClaim(savedClaim)
+        if (!success) {
+            scheduleSync()
         }
-
-        // Also schedule WorkManager for persistent offline/retry sync
-        scheduleSync()
     }
 
     private fun scheduleSync() {
@@ -66,9 +67,10 @@ class ClaimRepository(
         )
     }
 
-    suspend fun uploadClaim(claim: ClaimEntity): Boolean {
-        Log.d(TAG, "Starting upload for claim #${claim.id} ('${claim.description}')")
+    suspend fun uploadClaim(claim: ClaimEntity): Boolean = withContext(Dispatchers.IO) {
+        val claimTag = "claimId=${claim.claimId ?: "local#${claim.id}"}"
         try {
+            Log.d("CLAIMLENS_UPLOAD", "STATUS_UPLOADING [$claimTag]")
             claimDao.updateClaim(claim.copy(status = ClaimStatus.UPLOADING))
 
             val textPart = claim.description.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -90,13 +92,16 @@ class ClaimRepository(
                 } else null
             }
 
-            Log.d(TAG, "Sending multipart POST to ${NetworkConfig.BASE_URL}claims (hasImage=${imagePart != null}, hasAudio=${audioPart != null})")
+            Log.d("CLAIMLENS_UPLOAD", "HTTP_REQUEST_STARTED [$claimTag] url=${NetworkConfig.BASE_URL}claims (hasImage=${imagePart != null}, hasAudio=${audioPart != null})")
+
             val response = apiService.submitClaim(idPart, textPart, imagePart, audioPart)
-            Log.d(TAG, "Server responded with HTTP ${response.code()}")
+
+            Log.d("CLAIMLENS_UPLOAD", "HTTP_RESPONSE_RECEIVED [$claimTag] code=${response.code()}")
+            Log.d("CLAIMLENS_UPLOAD", "HTTP_STATUS_CODE [$claimTag] ${response.code()}")
 
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
-                Log.d(TAG, "Claim received successfully: claimId=${body.claimId}, status=${body.status}, conflictDetected=${body.conflictDetected}")
+                Log.d("CLAIMLENS_UPLOAD", "RESPONSE_BODY [$claimTag] claimId=${body.claimId}, status=${body.status}, conflictDetected=${body.conflictDetected}, message=${body.message}")
 
                 val resultStatus = when (body.status?.uppercase()) {
                     "CONFLICT_DETECTED" -> ClaimStatus.CONFLICT_DETECTED
@@ -114,6 +119,7 @@ class ClaimRepository(
                         body.message ?: "Claim processed successfully."
                     }
 
+                Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_STARTED [$claimTag] targetStatus=$resultStatus")
                 claimDao.updateClaim(
                     claim.copy(
                         claimId = body.claimId,
@@ -121,22 +127,52 @@ class ClaimRepository(
                         conflictResult = explanation
                     )
                 )
-                Log.d(TAG, "Claim #${claim.id} updated in Room to status: $resultStatus")
-                return true
+                Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_COMPLETED [$claimTag] finalStatus=$resultStatus")
+                Log.d("CLAIMLENS_UPLOAD", "FINAL_STATUS [$claimTag] status=$resultStatus explanation='$explanation'")
+                return@withContext true
             } else {
-                val errBody = response.errorBody()?.string()
-                Log.e(TAG, "Claim #${claim.id} upload failed with HTTP ${response.code()}: $errBody")
-                claimDao.updateClaim(claim.copy(status = ClaimStatus.ERROR, conflictResult = "Server error ${response.code()}: $errBody"))
-                return false
+                val errBody = response.errorBody()?.string() ?: "Empty error body"
+                Log.e("CLAIMLENS_UPLOAD", "RESPONSE_BODY_ERROR [$claimTag] code=${response.code()} body=$errBody")
+                Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_STARTED [$claimTag] targetStatus=ERROR")
+                claimDao.updateClaim(
+                    claim.copy(
+                        status = ClaimStatus.ERROR,
+                        conflictResult = "Server error ${response.code()}: $errBody"
+                    )
+                )
+                Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_COMPLETED [$claimTag] finalStatus=ERROR")
+                Log.d("CLAIMLENS_UPLOAD", "FINAL_STATUS [$claimTag] status=ERROR")
+                return@withContext false
             }
+        } catch (e: java.io.IOException) {
+            Log.e("CLAIMLENS_UPLOAD", "IOException [$claimTag] ${e.message}", e)
+            Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_STARTED [$claimTag] targetStatus=ERROR")
+            claimDao.updateClaim(claim.copy(status = ClaimStatus.ERROR, conflictResult = "Network error: ${e.message}"))
+            Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_COMPLETED [$claimTag] finalStatus=ERROR")
+            Log.d("CLAIMLENS_UPLOAD", "FINAL_STATUS [$claimTag] status=ERROR")
+            return@withContext false
+        } catch (e: retrofit2.HttpException) {
+            Log.e("CLAIMLENS_UPLOAD", "HttpException [$claimTag] code=${e.code()} message=${e.message}", e)
+            Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_STARTED [$claimTag] targetStatus=ERROR")
+            claimDao.updateClaim(claim.copy(status = ClaimStatus.ERROR, conflictResult = "HTTP error ${e.code()}: ${e.message}"))
+            Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_COMPLETED [$claimTag] finalStatus=ERROR")
+            Log.d("CLAIMLENS_UPLOAD", "FINAL_STATUS [$claimTag] status=ERROR")
+            return@withContext false
         } catch (e: Exception) {
-            Log.e(TAG, "Upload exception for claim #${claim.id}: ${e.message}", e)
-            claimDao.updateClaim(claim.copy(status = ClaimStatus.ERROR, conflictResult = "Connection failed: ${e.localizedMessage ?: e.message}"))
-            return false
+            Log.e("CLAIMLENS_UPLOAD", "Exception [$claimTag] ${e.javaClass.simpleName}: ${e.message}", e)
+            Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_STARTED [$claimTag] targetStatus=ERROR")
+            claimDao.updateClaim(claim.copy(status = ClaimStatus.ERROR, conflictResult = "Error: ${e.localizedMessage ?: e.message}"))
+            Log.d("CLAIMLENS_UPLOAD", "ROOM_UPDATE_COMPLETED [$claimTag] finalStatus=ERROR")
+            Log.d("CLAIMLENS_UPLOAD", "FINAL_STATUS [$claimTag] status=ERROR")
+            return@withContext false
         }
     }
 
     suspend fun getPendingClaims(): List<ClaimEntity> {
         return claimDao.getPendingClaims()
+    }
+
+    suspend fun clearStuckClaims() {
+        claimDao.clearStuckClaims()
     }
 }

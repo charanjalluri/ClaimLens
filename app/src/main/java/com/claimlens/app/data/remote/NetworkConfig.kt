@@ -13,7 +13,7 @@ object NetworkConfig {
      * For physical device: use "http://<PC-LAN-IP>:8000/" (e.g. "http://192.168.1.5:8000/")
      * Note: Cleartext HTTP is enabled in AndroidManifest.xml.
      */
-    var BASE_URL: String = "http://10.159.132.59:8000/"
+    var BASE_URL: String = "http://10.79.144.59:8000/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

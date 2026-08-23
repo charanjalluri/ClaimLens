@@ -3,6 +3,7 @@ package com.claimlens.app.data.remote
 import com.google.gson.annotations.SerializedName
 
 data class ConflictDetail(
+    @SerializedName("conflictId") val conflictId: String? = null,
     @SerializedName("id") val id: String? = null,
     @SerializedName("claimId") val claimId: String? = null,
     @SerializedName("conflictType") val conflictType: String? = null,
@@ -22,5 +23,6 @@ data class ClaimResponse(
     @SerializedName("message") val message: String? = null,
     @SerializedName("transcription") val transcription: String? = null,
     @SerializedName("imageAnalysis") val imageAnalysis: String? = null,
+    @SerializedName("processingTimeMs") val processingTimeMs: Long? = null,
     @SerializedName("conflict") val conflict: ConflictDetail? = null
 )

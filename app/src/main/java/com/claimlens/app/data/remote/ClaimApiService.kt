@@ -11,8 +11,8 @@ interface ClaimApiService {
     @Multipart
     @POST("claims")
     suspend fun submitClaim(
-        @Part("claimId") claimId: RequestBody?,
-        @Part("text") text: RequestBody,
+        @Part("claim_id") claimId: RequestBody?,
+        @Part("claim_text") claimText: RequestBody,
         @Part image: MultipartBody.Part?,
         @Part audio: MultipartBody.Part?
     ): Response<ClaimResponse>
