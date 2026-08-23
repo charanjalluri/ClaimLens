@@ -178,7 +178,7 @@ fun CaptureScreen(
                 navController.popBackStack()
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = state.description.isNotBlank() && state.photoPath != null && state.audioPath != null
+            enabled = state.description.isNotBlank()
         ) {
             Text("Submit Claim")
         }

@@ -12,6 +12,9 @@ interface ClaimDao {
     @Query("SELECT * FROM claims WHERE id = :id")
     suspend fun getClaimById(id: Long): ClaimEntity?
 
+    @Query("SELECT * FROM claims WHERE status IN ('PENDING_SYNC', 'UPLOADING') ORDER BY createdAt ASC")
+    suspend fun getPendingClaims(): List<ClaimEntity>
+
     @Query("SELECT * FROM claims WHERE status = :status")
     suspend fun getClaimsByStatus(status: ClaimStatus): List<ClaimEntity>
 
