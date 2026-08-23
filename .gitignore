@@ -20,7 +20,10 @@ venv/
 # Android Build & Artifacts
 *.iml
 .gradle/
+build/
 /build/
+app/build/
+/app/build/
 /captures/
 .externalNativeBuild/
 .cxx/

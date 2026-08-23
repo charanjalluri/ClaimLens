@@ -75,11 +75,27 @@ class ClaimRepository(
 
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
+                val resultStatus = when (body.status?.uppercase()) {
+                    "CONFLICT_DETECTED" -> ClaimStatus.CONFLICT_DETECTED
+                    "CLEAR", "NO_CONFLICT" -> ClaimStatus.NO_CONFLICT
+                    "PROCESSING" -> ClaimStatus.PROCESSING
+                    "AI_FAILED" -> ClaimStatus.ERROR
+                    "INSUFFICIENT_EVIDENCE" -> ClaimStatus.NO_CONFLICT
+                    else -> if (body.conflictDetected) ClaimStatus.CONFLICT_DETECTED else ClaimStatus.NO_CONFLICT
+                }
+                val explanation = body.conflictResult
+                    ?: body.conflict?.explanation
+                    ?: if (resultStatus == ClaimStatus.CONFLICT_DETECTED) {
+                        body.message ?: "Conflict detected between photo and voice evidence."
+                    } else {
+                        body.message ?: "Claim processed successfully."
+                    }
+
                 claimDao.updateClaim(
                     claim.copy(
                         claimId = body.claimId,
-                        status = body.status,
-                        conflictResult = body.conflictResult
+                        status = resultStatus,
+                        conflictResult = explanation
                     )
                 )
                 return true

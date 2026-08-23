@@ -30,11 +30,7 @@ class MainActivity : ComponentActivity() {
 
         // Initialize dependencies (Manual DI for Hackathon)
         val database = AppDatabase.getDatabase(applicationContext)
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://api.claimlens.com/") // Placeholder
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        val apiService = retrofit.create(ClaimApiService::class.java)
+        val apiService = com.claimlens.app.data.remote.NetworkConfig.createApiService()
         val repository = ClaimRepository(database.claimDao(), apiService, applicationContext)
         val factory = ViewModelFactory(repository)
 
