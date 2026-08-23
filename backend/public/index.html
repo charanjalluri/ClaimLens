@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClaimLens — AI Conflict Detection Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">🔍</div>
+        <div class="brand-text">
+          <h1>ClaimLens</h1>
+          <span class="badge-role">Admin Portal</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-item active" data-tab="all">
+          <span class="icon">📋</span> All Claims
+          <span class="pill" id="pill-all">0</span>
+        </button>
+        <button class="nav-item" data-tab="unresolved">
+          <span class="icon">⚠️</span> Conflicts
+          <span class="pill alert" id="pill-conflicts">0</span>
+        </button>
+        <button class="nav-item" data-tab="resolved">
+          <span class="icon">✅</span> Resolved
+          <span class="pill success" id="pill-resolved">0</span>
+        </button>
+        <button class="nav-item" data-tab="clear">
+          <span class="icon">🛡️</span> Clear Claims
+          <span class="pill" id="pill-clear">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="connection-status" id="ws-status">
+          <span class="status-dot pulsing"></span>
+          <span class="status-text">Real-Time Live</span>
+        </div>
+        <div class="system-meta">
+          <small>Backend v1.0.0 (Port 8000)</small>
+          <small>NVIDIA NIM + Whisper</small>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <h2>Insurance Claims & Conflict Monitor</h2>
+          <p class="subtitle">Real-time cross-modal fraud & discrepancy detection powered by Multimodal AI</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" id="btn-refresh">
+            <span class="icon">🔄</span> Refresh
+          </button>
+          <button class="btn btn-primary" id="btn-test-claim">
+            <span class="icon">⚡</span> Run PRD Test Case
+          </button>
+        </div>
+      </header>
+
+      <!-- Stat Cards -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon-wrapper blue">
+            <span>📑</span>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Total Claims</span>
+            <span class="stat-value" id="stat-total">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card alert-card">
+          <div class="stat-icon-wrapper red">
+            <span>⚠️</span>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Active Conflicts</span>
+            <span class="stat-value" id="stat-conflicts">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper emerald">
+            <span>✅</span>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Resolved Claims</span>
+            <span class="stat-value" id="stat-resolved">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper purple">
+            <span>⚡</span>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Avg AI Latency</span>
+            <span class="stat-value" id="stat-latency">&lt; 3s</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Search & Filters -->
+      <section class="toolbar-section">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Search by Claim ID, description, or keyword..." />
+        </div>
+        <div class="filter-tabs" id="filter-tabs">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="unresolved">Conflicts Only</button>
+          <button class="filter-btn" data-filter="clear">Clear Only</button>
+          <button class="filter-btn" data-filter="resolved">Resolved</button>
+        </div>
+      </section>
+
+      <!-- Claims Table Section -->
+      <section class="table-container">
+        <table class="claims-table">
+          <thead>
+            <tr>
+              <th>Claim ID</th>
+              <th>Claimant / Timestamp</th>
+              <th>Claim Description</th>
+              <th>Evidence</th>
+              <th>AI Status</th>
+              <th>Conflict Summary</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="claims-table-body">
+            <tr>
+              <td colspan="7" class="loading-state">
+                <div class="spinner"></div>
+                <span>Loading claims from SQLite database...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <!-- Detail & Resolution Modal -->
+  <div class="modal-overlay" id="detail-modal">
+    <div class="modal-card">
+      <header class="modal-header">
+        <div>
+          <div class="modal-title-row">
+            <h3 id="modal-claim-id">CLM-001</h3>
+            <span class="status-badge" id="modal-status-badge">CONFLICT DETECTED</span>
+          </div>
+          <p class="modal-subtitle" id="modal-date">Submitted: 2026-08-23 10:30 AM</p>
+        </div>
+        <button class="modal-close" id="modal-close-btn">&times;</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Evidence Row -->
+        <div class="evidence-grid">
+          <!-- Text Box -->
+          <div class="evidence-panel">
+            <h4><span class="icon">📝</span> Claimant Text Description</h4>
+            <div class="text-content" id="modal-claim-text">
+              "My front bumper is damaged."
+            </div>
+          </div>
+
+          <!-- Photo Box -->
+          <div class="evidence-panel">
+            <h4><span class="icon">📷</span> Photo Evidence</h4>
+            <div class="media-container" id="modal-photo-container">
+              <span class="no-media">No photo uploaded</span>
+            </div>
+            <div class="ai-insight" id="modal-image-analysis-box">
+              <small><strong>Vision AI Analysis:</strong></small>
+              <p id="modal-image-analysis-text">Front bumper shows impact scraping.</p>
+            </div>
+          </div>
+
+          <!-- Audio Box -->
+          <div class="evidence-panel">
+            <h4><span class="icon">🎙️</span> Voice Recording</h4>
+            <div class="media-container" id="modal-audio-container">
+              <span class="no-media">No audio recorded</span>
+            </div>
+            <div class="ai-insight" id="modal-transcription-box">
+              <small><strong>Whisper Transcription:</strong></small>
+              <p id="modal-transcription-text">"My windshield was completely broken."</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conflict Analysis Details -->
+        <div class="conflict-highlight-box" id="modal-conflict-box">
+          <div class="conflict-header">
+            <h4><span class="icon">⚠️</span> Multimodal Contradiction Analysis</h4>
+            <span class="conflict-type-pill" id="modal-conflict-type">DAMAGE LOCATION MISMATCH</span>
+          </div>
+
+          <div class="conflict-comparison">
+            <div class="evidence-compare-card side-a">
+              <span class="side-label">Evidence Source A</span>
+              <p id="modal-evidence-a">Photo & text report front bumper damage.</p>
+            </div>
+            <div class="vs-divider">VS</div>
+            <div class="evidence-compare-card side-b">
+              <span class="side-label">Evidence Source B</span>
+              <p id="modal-evidence-b">Voice recording states windshield is broken.</p>
+            </div>
+          </div>
+
+          <div class="explanation-box">
+            <strong>AI Chain-of-Thought Reasoning:</strong>
+            <p id="modal-explanation">The visual and voice evidence describe different damaged components.</p>
+          </div>
+
+          <div class="confidence-bar-wrapper">
+            <div class="confidence-meta">
+              <span>Confidence Score</span>
+              <strong id="modal-confidence-val">91%</strong>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="modal-confidence-bar" style="width: 91%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resolution History / Form -->
+        <div class="resolution-section" id="modal-resolution-section">
+          <h4><span class="icon">⚖️</span> Adjuster Resolution</h4>
+          <div id="modal-resolutions-list"></div>
+
+          <form id="resolution-form" class="resolution-form">
+            <label for="resolution-notes">Resolution Notes / Adjuster Decision:</label>
+            <textarea id="resolution-notes" placeholder="Enter findings, claimant contact summary, or policy override details..." rows="3" required></textarea>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="btn-dismiss-conflict">Dismiss Discrepancy</button>
+              <button type="submit" class="btn btn-primary" id="btn-submit-resolution">Resolve Conflict & Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
