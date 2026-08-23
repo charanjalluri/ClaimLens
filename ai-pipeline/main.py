@@ -5,16 +5,16 @@ Start with:
     uvicorn main:app --port 8001 --reload
 
 Environment variables (set in .env file):
-    GEMINI_API_KEY  — Required. Get from https://aistudio.google.com/app/apikey
+    NVIDIA_API_KEY  — Required. Get from https://build.nvidia.com
+    NVIDIA_MODEL    — Optional. Default: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+    NVIDIA_API_URL  — Optional. Default: https://integrate.api.nvidia.com/v1
     WHISPER_MODEL   — Optional. Model size: tiny|base|small|medium (default: base)
-    GEMINI_MODEL    — Optional. Gemini model name (default: gemini-1.5-flash)
     PORT            — Optional. Service port (default: 8001)
     LOG_LEVEL       — Optional. Logging level (default: INFO)
 """
 import logging
 import os
 
-import google.generativeai as genai  # type: ignore
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,23 +31,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ─── Gemini API Key ───────────────────────────────────────────────────────────
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
+# ─── NVIDIA API Key ───────────────────────────────────────────────────────────
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
+if not NVIDIA_API_KEY:
     logger.error(
-        "GEMINI_API_KEY is not set! "
-        "Copy .env.example to .env and add your key from https://aistudio.google.com/app/apikey"
+        "NVIDIA_API_KEY is not set! "
+        "Copy .env.example to .env and add your key from https://build.nvidia.com"
     )
 else:
-    genai.configure(api_key=GEMINI_API_KEY)
-    logger.info("Gemini API configured.")
+    logger.info("NVIDIA NIM API key loaded.")
 
 # ─── FastAPI App ──────────────────────────────────────────────────────────────
 app = FastAPI(
     title="ClaimLens AI Pipeline",
     description=(
         "Multimodal insurance claim conflict detection service. "
-        "Accepts text + image + audio evidence and returns structured conflict analysis."
+        "Accepts text + image + audio evidence and returns structured conflict analysis. "
+        "Powered by NVIDIA NIM (nemotron-3-nano-omni) + OpenAI Whisper."
     ),
     version="1.0.0",
     docs_url="/docs",
@@ -64,7 +64,7 @@ app.add_middleware(
 )
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
-from api.routes import router  # noqa: E402  (import after app creation to avoid circular)
+from api.routes import router  # noqa: E402
 app.include_router(router)
 
 
@@ -72,9 +72,10 @@ app.include_router(router)
 async def startup_event():
     logger.info("=" * 60)
     logger.info("  ClaimLens AI Pipeline  —  Starting up")
-    logger.info(f"  Whisper model : {os.getenv('WHISPER_MODEL', 'base')}")
-    logger.info(f"  Gemini model  : {os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')}")
-    logger.info(f"  API docs      : http://localhost:{os.getenv('PORT', '8001')}/docs")
+    logger.info(f"  Whisper model  : {os.getenv('WHISPER_MODEL', 'base')}")
+    logger.info(f"  NVIDIA model   : {os.getenv('NVIDIA_MODEL', 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning')}")
+    logger.info(f"  NVIDIA API URL : {os.getenv('NVIDIA_API_URL', 'https://integrate.api.nvidia.com/v1')}")
+    logger.info(f"  API docs       : http://localhost:{os.getenv('PORT', '8001')}/docs")
     logger.info("=" * 60)
 
 

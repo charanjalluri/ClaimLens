@@ -1,22 +1,28 @@
 """
-ClaimLens AI Pipeline — Conflict Detection (Gemini)
-====================================================
+ClaimLens AI Pipeline — Conflict Detection (NVIDIA NIM)
+=======================================================
 The core intelligence of ClaimLens.
 Takes all three evidence streams (text, transcription, image analysis)
-and uses Gemini 1.5 Flash to detect contradictions and generate
-a structured conflict report.
+and uses the NVIDIA NIM reasoning model to detect contradictions and
+generate a structured conflict report.
+
+Model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+  — 30B parameter model with built-in chain-of-thought reasoning
+  — reasoning_budget controls how much thinking the model does
 """
 import json
 import logging
+import os
 import re
 from typing import Optional
 
-import google.generativeai as genai  # type: ignore
+import requests
 
 logger = logging.getLogger(__name__)
 
-CONFLICT_DETECTION_PROMPT = """
-You are an expert insurance fraud investigator and claims analyst.
+NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+
+CONFLICT_DETECTION_PROMPT = """You are an expert insurance fraud investigator and claims analyst.
 
 A new insurance claim has been submitted with the following evidence:
 
@@ -40,7 +46,7 @@ A conflict exists when:
 - The photo shows no damage but text/voice claim significant damage
 - Locations are inconsistent (e.g., "front" vs "rear")
 
-Respond ONLY in this exact JSON format (no other text):
+Respond ONLY in this exact JSON format (no other text, no markdown):
 {{
   "conflictDetected": <true or false>,
   "confidence": <0.0 to 1.0>,
@@ -60,12 +66,21 @@ Rules:
 """
 
 
+def _get_nvidia_key() -> str:
+    key = os.getenv("NVIDIA_API_KEY", "")
+    if not key:
+        raise EnvironmentError(
+            "NVIDIA_API_KEY is not set. Copy .env.example to .env and set your key."
+        )
+    return key
+
+
 def detect_conflicts(
     claim_id: str,
     claim_text: str,
     transcription: Optional[str],
     image_analysis: Optional[str],
-    gemini_model: str = "gemini-1.5-flash",
+    nvidia_model: Optional[str] = None,
 ) -> dict:
     """
     Run multimodal conflict detection across all evidence sources.
@@ -75,16 +90,15 @@ def detect_conflicts(
         claim_text:     Text entered by the claimant.
         transcription:  Voice-to-text output (may be None).
         image_analysis: Image description from vision model (may be None).
-        gemini_model:   Gemini model to use.
+        nvidia_model:   NVIDIA NIM model name (reads env var if None).
 
     Returns:
         dict matching the standard ClaimLens AI response format.
     """
-    # Handle missing evidence gracefully
-    transcription_text = transcription if transcription else "No voice recording provided."
-    image_text = image_analysis if image_analysis else "No photo provided."
+    transcription_text = transcription or "No voice recording provided."
+    image_text = image_analysis or "No photo provided."
 
-    # Check for insufficient evidence
+    # Require at least 2 evidence sources for meaningful conflict detection
     evidence_count = sum([
         bool(claim_text and claim_text.strip()),
         bool(transcription and transcription.strip()),
@@ -92,38 +106,59 @@ def detect_conflicts(
     ])
 
     if evidence_count < 2:
-        logger.warning(f"[{claim_id}] Insufficient evidence ({evidence_count} sources) for conflict detection.")
-        return _insufficient_evidence_result(claim_id, claim_text, transcription, image_analysis)
+        logger.warning(f"[{claim_id}] Insufficient evidence ({evidence_count} sources).")
+        return _insufficient_evidence_result(claim_id)
+
+    model = nvidia_model or os.getenv(
+        "NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+    )
+
+    prompt = CONFLICT_DETECTION_PROMPT.format(
+        claim_text=claim_text or "(not provided)",
+        transcription=transcription_text,
+        image_analysis=image_text,
+    )
+
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 65536,
+        "reasoning_budget": 16384,   # Allow full chain-of-thought reasoning
+        "temperature": 0.6,
+        "top_p": 0.95,
+        "stream": False,
+    }
+
+    headers = {
+        "Authorization": f"Bearer {_get_nvidia_key()}",
+        "Accept": "application/json",
+    }
 
     try:
-        model = genai.GenerativeModel(gemini_model)
-
-        prompt = CONFLICT_DETECTION_PROMPT.format(
-            claim_text=claim_text or "(not provided)",
-            transcription=transcription_text,
-            image_analysis=image_text,
+        logger.info(f"[{claim_id}] Running conflict detection via NVIDIA NIM (model={model})...")
+        resp = requests.post(
+            NVIDIA_API_URL,
+            headers=headers,
+            json=payload,
+            timeout=120,   # Reasoning model can take longer
         )
+        resp.raise_for_status()
 
-        logger.info(f"[{claim_id}] Running conflict detection with Gemini...")
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.2,      # Slightly creative for nuanced reasoning
-                max_output_tokens=800,
-            ),
-        )
+        raw_text = resp.json()["choices"][0]["message"]["content"].strip()
+        logger.debug(f"[{claim_id}] NVIDIA conflict response: {raw_text}")
 
-        raw_text = response.text.strip()
-        logger.debug(f"[{claim_id}] Gemini conflict response: {raw_text}")
-
-        # Extract JSON (handle markdown code fences)
-        json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+        # Extract the JSON block (model may include <think>...</think> reasoning)
+        # Strip <think> sections first, then find the JSON object
+        cleaned = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL).strip()
+        json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
         if not json_match:
-            raise ValueError(f"No JSON in conflict response: {raw_text}")
+            # Fallback: try raw_text in case no <think> tags
+            json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+        if not json_match:
+            raise ValueError(f"No JSON found in conflict response: {raw_text}")
 
         parsed = json.loads(json_match.group())
 
-        # Normalise and validate
         result = {
             "claimId": claim_id,
             "conflictDetected": bool(parsed.get("conflictDetected", False)),
@@ -136,7 +171,7 @@ def detect_conflicts(
         }
 
         logger.info(
-            f"[{claim_id}] Conflict detection done. "
+            f"[{claim_id}] Conflict detection done — "
             f"conflictDetected={result['conflictDetected']}, "
             f"confidence={result['confidence']:.2f}, "
             f"type={result['conflictType']}"
@@ -148,13 +183,8 @@ def detect_conflicts(
         raise
 
 
-def _insufficient_evidence_result(
-    claim_id: str,
-    claim_text: str,
-    transcription: Optional[str],
-    image_analysis: Optional[str],
-) -> dict:
-    """Return a structured result when there is not enough evidence to determine conflicts."""
+def _insufficient_evidence_result(claim_id: str) -> dict:
+    """Return a structured result when there is not enough evidence."""
     return {
         "claimId": claim_id,
         "conflictDetected": False,

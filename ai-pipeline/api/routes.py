@@ -2,12 +2,12 @@
 ClaimLens AI Pipeline — FastAPI Routes
 =======================================
 Defines the /api/v1/analyze and /health endpoints.
+Powered by NVIDIA NIM (vision + reasoning) + OpenAI Whisper (transcription).
 """
 import logging
 import time
 from typing import Optional
 
-import google.generativeai as genai  # type: ignore
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
@@ -32,7 +32,7 @@ async def health_check():
         status="healthy",
         version="1.0.0",
         whisperModel=os.getenv("WHISPER_MODEL", "base"),
-        geminiModel=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
+        geminiModel=os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"),
     )
 
 
@@ -105,11 +105,11 @@ async def analyze_claim(
         image_bytes = await image.read()
         if validate_image_bytes(image_bytes):
             logger.info(f"[{claim_id}] Stage 2: Analyzing image ({len(image_bytes)} bytes)...")
-            gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+            nvidia_model = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning")
             image_result = analyze_image(
                 image_bytes=image_bytes,
                 filename=image.filename or "image.jpg",
-                gemini_model=gemini_model,
+                nvidia_model=nvidia_model,
             )
             if image_result["success"]:
                 # Compose a rich description string for the conflict detector
@@ -135,13 +135,13 @@ async def analyze_claim(
     try:
         import os
         logger.info(f"[{claim_id}] Stage 3: Running conflict detection...")
-        gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        nvidia_model = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning")
         conflict_result = detect_conflicts(
             claim_id=claim_id,
             claim_text=claim_text,
             transcription=transcription_text,
             image_analysis=image_analysis_text,
-            gemini_model=gemini_model,
+            nvidia_model=nvidia_model,
         )
     except Exception as exc:
         processing_time = int((time.time() - start_time) * 1000)
